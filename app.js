@@ -28,33 +28,33 @@ function generateReasoningQuestions(count = 20) {
 }
 
 function generatePerceptionQuestions(count = 20) {
-  const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+  // Exclude visually ambiguous: I (mirip l), O (mirip 0), Q (mirip O)
+  const LETTERS = 'ABCDEFGHJKMNPRSTUVWXYZ'.split('');
+  const n = LETTERS.length;
   const questions = [];
 
   while (questions.length < count) {
-    const answer = randInt(0, 4);
-    const pairs  = [];
-    const used   = new Set();
+    const answer   = randInt(0, 4);
+    const pairs    = [];
+    const used     = new Set();
+    const topUpper = Math.random() < 0.5; // seluruh soal: atas kapital atau kecil
 
-    // Matching pairs: same letter, mixed case presentation
+    // Matching pairs: same letter
     for (let i = 0; i < answer; i++) {
       let l;
-      do { l = LETTERS[randInt(0, 25)]; } while (used.has(l));
+      do { l = LETTERS[randInt(0, n - 1)]; } while (used.has(l));
       used.add(l);
-      const topUpper = Math.random() < 0.5;
-      pairs.push([topUpper ? l : l.toLowerCase(), topUpper ? l.toLowerCase() : l]);
+      pairs.push(topUpper ? [l, l.toLowerCase()] : [l.toLowerCase(), l]);
     }
 
-    // Non-matching pairs: two different letters
+    // Non-matching pairs: different letters
     for (let i = 0; i < 4 - answer; i++) {
       let l1, l2;
-      do { l1 = LETTERS[randInt(0, 25)]; } while (used.has(l1));
+      do { l1 = LETTERS[randInt(0, n - 1)]; } while (used.has(l1));
       used.add(l1);
-      do { l2 = LETTERS[randInt(0, 25)]; } while (l2 === l1 || used.has(l2));
+      do { l2 = LETTERS[randInt(0, n - 1)]; } while (l2 === l1 || used.has(l2));
       used.add(l2);
-      const top = Math.random() < 0.5 ? l1 : l1.toLowerCase();
-      const bot = Math.random() < 0.5 ? l2 : l2.toLowerCase();
-      pairs.push([top, bot]);
+      pairs.push(topUpper ? [l1, l2.toLowerCase()] : [l1.toLowerCase(), l2]);
     }
 
     questions.push({ pairs: shuffle(pairs), answer });
