@@ -96,10 +96,10 @@ function generateNumberQuestions(count = 20) {
   while (questions.length < count && attempts < 2000) {
     attempts++;
 
-    const middle = randInt(6, 28);
-    const dNear  = randInt(1, 6);
-    // dFar must be strictly different from dNear AND larger
-    const dFar   = randInt(dNear + 1, dNear + 9);
+    const middle = randInt(5, 30);
+    const dNear  = randInt(2, 7);
+    // dFar hanya 1–3 lebih besar dari dNear → perlu hitung beneran, tidak obvious
+    const dFar   = dNear + randInt(1, 3);
 
     // Randomly decide: answer is the high outlier or the low outlier
     const answerIsHigh = Math.random() < 0.5;
@@ -131,15 +131,16 @@ function generateNumberQuestions(count = 20) {
 }
 
 // ===== STATE =====
-let currentTest = 0;
-let currentQ    = 0;
-let userAnswers = [];
-let testScores  = [];
-let timer       = null;
-let timeLeft    = 0;
-let testStarted = false;
-let testQueue   = [];   // ordered list of TESTS indices to run
-let queuePos    = 0;    // current position in testQueue
+let currentTest      = 0;
+let currentQ         = 0;
+let userAnswers      = [];
+let testScores       = [];
+let timer            = null;
+let timeLeft         = 0;
+let testStarted      = false;
+let testQueue        = [];
+let queuePos         = 0;
+let questionStartTime = 0;  // ms timestamp when current question became answerable
 
 // ===== WELCOME: TEST SELECTOR =====
 function toggleTestSelect(el) {
@@ -163,6 +164,7 @@ function startTest() {
   queuePos  = 0;
 
   document.getElementById('screenWelcome').classList.add('hidden');
+  document.getElementById('progressWrapper').classList.remove('hidden');
   buildProgressSteps();
   runTest(testQueue[0]);
 }
@@ -274,6 +276,10 @@ function renderQuestion() {
 
   if (ctr) ctr.innerHTML = `Soal <span>${currentQ + 1}</span> dari <span>${t.questions.length}</span>`;
 
+  // For reasoning, timer starts when phase 2 is revealed (see revealReasoningQuestion)
+  // For all other types, start immediately
+  if (t.type !== 'reasoning') questionStartTime = Date.now();
+
   switch (t.type) {
     case 'reasoning': renderReasoning(q, qArea); break;
     case 'perception': renderPerception(q, qArea); break;
@@ -285,8 +291,14 @@ function renderQuestion() {
 
 // ===== ANSWER HANDLER =====
 function submitAnswer(userAns, correctAns) {
-  const isCorrect = String(userAns) === String(correctAns);
-  userAnswers.push({ testIdx: currentTest, qIdx: currentQ, userAnswer: userAns, correct: isCorrect });
+  const isCorrect   = String(userAns) === String(correctAns);
+  const timeTaken   = questionStartTime ? Math.round((Date.now() - questionStartTime) / 100) / 10 : null;
+  userAnswers.push({
+    testIdx: currentTest, qIdx: currentQ,
+    userAnswer: userAns, correct: isCorrect,
+    timeTaken,           // seconds to answer (1 decimal)
+    timeRemaining: timeLeft
+  });
 
   // Disable all buttons silently — no feedback shown during test
   document.querySelectorAll('.choice-btn, .num-btn, .word-btn, .perc-btn, .sp-ans-btn').forEach(b => {
@@ -455,11 +467,16 @@ function buildReviewList() {
           break;
       }
 
+      const timeInfo = ans.timeTaken !== null
+        ? `<span class="ri-time">⏱ ${ans.timeTaken}d · sisa ${formatTime(ans.timeRemaining)}</span>`
+        : '';
+
       item.innerHTML = `
         <div class="ri-q">${qi+1}. ${qText}</div>
         <div class="ri-ans">
           <span class="ri-user ${ans.correct ? 'ok' : 'bad'}">${userText}</span>
           <span class="ri-correct">✓ ${correctText}</span>
+          ${timeInfo}
         </div>
       `;
       list.appendChild(item);
@@ -541,6 +558,7 @@ function revealReasoningQuestion() {
     phase2.style.opacity = '0';
     phase2.style.transition = 'opacity 0.25s';
     requestAnimationFrame(() => { phase2.style.opacity = '1'; });
+    questionStartTime = Date.now();
   }, 250);
 }
 
@@ -565,19 +583,6 @@ function renderPerception(q, area) {
   `).join('');
 
   area.innerHTML = `
-    <style>
-      .perc-grid{display:flex;gap:0;border:2px solid var(--gray);border-radius:10px;overflow:hidden;margin-bottom:20px;background:var(--white)}
-      .perc-cell{flex:1;display:flex;flex-direction:column;align-items:center;border-right:1px solid var(--gray)}
-      .perc-cell:last-child{border-right:none}
-      .perc-top,.perc-bot{padding:18px 10px;font-size:1.6rem;font-weight:700;color:var(--blue);width:100%;text-align:center}
-      .perc-top{border-bottom:1px dashed var(--gray)}
-      .perc-answers{display:flex;gap:10px;justify-content:center}
-      .perc-btn{width:52px;height:52px;border-radius:10px;border:2.5px solid var(--gray);background:var(--white);font-size:1.1rem;font-weight:700;cursor:pointer;transition:var(--transition)}
-      .perc-btn:hover:not(:disabled){border-color:var(--blue);background:#eef2ff;transform:scale(1.08)}
-      .perc-btn.selected-correct{border-color:var(--green);background:#e8f5e9;color:var(--green-dark)}
-      .perc-btn.selected-wrong{border-color:var(--red);background:#fdecea;color:var(--red)}
-      .perc-btn.reveal-correct{border-color:var(--green);background:#e8f5e9}
-    </style>
     <div class="perc-grid">${cells}</div>
     <div class="perc-answers">${btns}</div>
   `;
@@ -596,17 +601,7 @@ function renderNumber(q, area) {
     <button class="num-btn" onclick="answerNumber(${n}, ${q.answer}, this)">${n}</button>
   `).join('');
 
-  area.innerHTML = `
-    <style>
-      .num-row{display:flex;gap:16px;justify-content:center;margin-bottom:10px}
-      .num-btn{min-width:90px;padding:28px 20px;border-radius:12px;border:2.5px solid var(--gray);background:var(--white);font-size:1.8rem;font-weight:800;color:var(--blue);cursor:pointer;transition:var(--transition);box-shadow:0 2px 8px rgba(0,0,0,0.06)}
-      .num-btn:hover:not(:disabled){border-color:var(--blue);background:#eef2ff;transform:translateY(-3px);box-shadow:0 8px 20px rgba(26,58,92,0.15)}
-      .num-btn.selected-correct{border-color:var(--green);background:#e8f5e9;color:var(--green-dark)}
-      .num-btn.selected-wrong{border-color:var(--red);background:#fdecea;color:var(--red)}
-      .num-btn.reveal-correct{border-color:var(--green);background:#e8f5e9}
-    </style>
-    <div class="num-row">${btns}</div>
-  `;
+  area.innerHTML = `<div class="num-row">${btns}</div>`;
 }
 
 function answerNumber(chosen, correct, btn) {
@@ -625,35 +620,7 @@ function renderWord(q, area) {
     <button class="word-btn" onclick="answerWord('${w}', '${q.answer}', this)">${w}</button>
   `).join('');
 
-  area.innerHTML = `
-    <style>
-      .word-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
-      .word-btn{
-        flex:1;min-width:140px;max-width:220px;
-        padding:26px 18px;
-        border-radius:12px;
-        border:2.5px solid var(--gray);
-        background:var(--white);
-        font-size:1.25rem;
-        font-weight:700;
-        color:var(--blue);
-        cursor:pointer;
-        transition:var(--transition);
-        box-shadow:0 2px 10px rgba(0,0,0,0.07);
-        letter-spacing:-0.2px;
-      }
-      .word-btn:hover:not(:disabled){
-        border-color:var(--blue);
-        background:#eef2ff;
-        transform:translateY(-3px);
-        box-shadow:0 8px 22px rgba(26,58,92,0.14);
-      }
-      .word-btn.selected-correct{border-color:var(--green);background:#e8f5e9;color:var(--green-dark);}
-      .word-btn.selected-wrong{border-color:var(--red);background:#fdecea;color:var(--red);}
-      @media(max-width:500px){.word-btn{max-width:100%;}}
-    </style>
-    <div class="word-row">${btns}</div>
-  `;
+  area.innerHTML = `<div class="word-row">${btns}</div>`;
 }
 
 function answerWord(chosen, correct, btn) {
@@ -679,19 +646,6 @@ function renderSpatial(q, area) {
   }
 
   area.innerHTML = `
-    <style>
-      .sp-grid{display:flex;gap:16px;justify-content:center;margin-bottom:22px;flex-wrap:wrap}
-      .sp-pair{display:flex;flex-direction:column;border:2px solid var(--gray);border-radius:10px;overflow:hidden;background:var(--white)}
-      .sp-cell{padding:14px 18px;display:flex;align-items:center;justify-content:center}
-      .sp-top{border-bottom:1px dashed var(--gray)}
-      .sp-letter{font-size:2.2rem;font-weight:900;color:var(--blue);display:inline-block;line-height:1;user-select:none}
-      .sp-ans-row{display:flex;gap:10px;justify-content:center}
-      .sp-ans-btn{width:56px;height:56px;border-radius:10px;border:2.5px solid var(--gray);background:var(--white);font-size:1.2rem;font-weight:700;cursor:pointer;transition:var(--transition)}
-      .sp-ans-btn:hover:not(:disabled){border-color:var(--blue);background:#eef2ff;transform:scale(1.08)}
-      .sp-ans-btn.selected-correct{border-color:var(--green);background:#e8f5e9;color:var(--green-dark)}
-      .sp-ans-btn.selected-wrong{border-color:var(--red);background:#fdecea;color:var(--red)}
-      .sp-ans-btn.reveal-correct{border-color:var(--green);background:#e8f5e9}
-    </style>
     <div class="sp-grid">${pairBoxes}</div>
     <div class="sp-ans-row">${ansBtns.join('')}</div>
   `;
