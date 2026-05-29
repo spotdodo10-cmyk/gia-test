@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GIA — General Intelligence Assessment</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-logo">GIA</div>
+  <div class="header-text">
+    <h1>General Intelligence Assessment</h1>
+    <p>Thomas International · Measuring ability and aptitude</p>
+  </div>
+</header>
+
+<div class="app-container">
+
+  <!-- PROGRESS -->
+  <div class="progress-wrapper" id="progressWrapper">
+    <div class="progress-steps" id="progressSteps"></div>
+    <div class="progress-bar-track">
+      <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
+    </div>
+  </div>
+
+  <!-- ===== WELCOME ===== -->
+  <div class="card" id="screenWelcome">
+    <div class="welcome-screen">
+      <h2>Selamat Datang di GIA</h2>
+      <p>Pilih satu atau lebih tes yang ingin dikerjakan, lalu klik <strong>Mulai Tes</strong>.</p>
+      <div class="test-overview" id="testSelector">
+        <div class="test-overview-item" data-idx="0" onclick="toggleTestSelect(this)">
+          <div class="select-check">✓</div>
+          <div class="icon">🧠</div><div class="name">Penalaran</div><div class="count">20 soal · 3 menit</div>
+        </div>
+        <div class="test-overview-item" data-idx="1" onclick="toggleTestSelect(this)">
+          <div class="select-check">✓</div>
+          <div class="icon">👁️</div><div class="name">Kecepatan Persepsi</div><div class="count">20 soal · 2 menit</div>
+        </div>
+        <div class="test-overview-item" data-idx="2" onclick="toggleTestSelect(this)">
+          <div class="select-check">✓</div>
+          <div class="icon">🔢</div><div class="name">Ketepatan Angka</div><div class="count">20 soal · 2 menit</div>
+        </div>
+        <div class="test-overview-item" data-idx="3" onclick="toggleTestSelect(this)">
+          <div class="select-check">✓</div>
+          <div class="icon">📖</div><div class="name">Pemahaman Kata</div><div class="count">20 soal · 2 menit</div>
+        </div>
+        <div class="test-overview-item" data-idx="4" onclick="toggleTestSelect(this)">
+          <div class="select-check">✓</div>
+          <div class="icon">🔷</div><div class="name">Visualisasi Ruang</div><div class="count">20 soal · 3 menit</div>
+        </div>
+      </div>
+      <p id="selectHint" class="select-hint hidden">Pilih minimal satu tes.</p>
+      <button class="btn btn-success" id="startBtn" onclick="startTest()">Mulai Tes ›</button>
+    </div>
+  </div>
+
+  <!-- ===== TEST SCREENS (injected by JS) ===== -->
+  <div id="testArea"></div>
+
+  <!-- ===== RESULTS ===== -->
+  <div class="card hidden" id="screenResults">
+    <div class="results-screen">
+      <h2>Hasil Tes GIA</h2>
+      <p id="resultsSubtitle" style="color:var(--text-muted);margin-bottom:0"></p>
+      <div class="score-circle-wrap">
+        <div class="score-circle" id="scoreCircle">
+          <div class="score-circle-inner">
+            <span class="score-pct" id="scorePct">0%</span>
+            <span class="score-lbl">Total Skor</span>
+          </div>
+        </div>
+      </div>
+      <div class="results-grid" id="resultsGrid"></div>
+      <button class="btn btn-secondary review-toggle" onclick="toggleReview()">📋 Lihat Jawaban Lengkap</button>
+      <div class="review-list hidden" id="reviewList"></div>
+      <div style="margin-top:24px">
+        <button class="btn btn-primary" onclick="restartAll()">↺ Ulangi Tes</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="pool-penalaran.js"></script>
+<script src="pool-kata.js"></script>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
